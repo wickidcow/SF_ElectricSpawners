@@ -1,8 +1,9 @@
 name: ElectricSpawners
 version: ${project.version}
-author: TheBusyBiscuit
-depend: [Slimefun]
-
-api-version: 1.13
-
 main: io.github.thebusybiscuit.electricspawners.ElectricSpawners
+api-version: '26.2'
+author: TheBusyBiscuit
+contributors: [wickidcow]
+description: Electric monster spawners maintained for Slimefun Legacy and modern Paper.
+website: https://github.com/wickidcow/SF_ElectricSpawners
+depend: [Slimefun]
