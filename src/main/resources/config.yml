@@ -1,5 +1,18 @@
-options:
-  auto-update: true
+# ElectricSpawners Legacy configuration
+#
+# Existing ElectricSpawners configs remain compatible. Historical entity names
+# such as MUSHROOM_COW are translated to their modern Paper equivalents at runtime.
+
+mob-ai:
+  # Force every mob spawned by an Electric Spawner to have its AI disabled.
+  # When true, players cannot enable AI from the machine menu.
+  force-disable: false
+
+  # Default AI state for newly placed Electric Spawners when force-disable is false.
+  # Players can toggle this setting per spawner from the machine menu.
+  default-disabled: false
+
+# Preserve the original ElectricSpawners selection and item IDs by default.
 mobs:
 - BLAZE
 - CAVE_SPIDER
