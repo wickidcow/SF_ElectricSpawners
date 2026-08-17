@@ -2,11 +2,10 @@ name: Build ElectricSpawners 26.2 / Slimefun Legacy
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
+    tags: ['v*']
   pull_request:
-    branches:
-      - master
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -20,20 +19,17 @@ jobs:
   build:
     name: Java 25 / Paper 26.2 / Slimefun Legacy
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout ElectricSpawners
         uses: actions/checkout@v5
         with:
           path: electricspawners
-
       - name: Checkout Slimefun Legacy
         uses: actions/checkout@v5
         with:
           repository: wickidcow/Slimefun-Legacy
           ref: master
           path: slimefun-legacy
-
       - name: Set up Java 25
         uses: actions/setup-java@v5
         with:
@@ -41,50 +37,39 @@ jobs:
           java-version: '25'
           cache: maven
           cache-dependency-path: electricspawners/pom.xml
-
       - name: Publish Slimefun Legacy API to Maven Local
         working-directory: slimefun-legacy
         shell: bash
         run: |
+          set -euo pipefail
           chmod +x ./gradlew
-          for attempt in 1 2 3; do
-            echo "Slimefun Legacy publish attempt ${attempt}/3"
-            if ./gradlew publishToMavenLocal -PprojectVersion=Legacy-SNAPSHOT -x test --no-daemon; then
-              exit 0
-            fi
-          done
-          exit 1
-
+          ./gradlew publishToMavenLocal -PprojectVersion=Legacy-SNAPSHOT -x test --no-daemon
       - name: Build ElectricSpawners
         working-directory: electricspawners
         run: mvn -B -ntp clean package
-
-      - name: Verify and stage direct JAR
+      - name: Stage versioned JAR
         id: artifact
         working-directory: electricspawners
         shell: bash
         run: |
+          set -euo pipefail
           VERSION="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
-          JAR="SF_ElectricSpawners_Legacy_v${VERSION}.jar"
-          SOURCE="target/${JAR}"
-
-          test -f "${SOURCE}"
+          SOURCE="target/SF_ElectricSpawners_Legacy_v${VERSION}.jar"
+          NAME="SF_ElectricSpawners${VERSION}.jar"
+          test -s "$SOURCE"
           mkdir -p dist
-          cp "${SOURCE}" "dist/${JAR}"
-
-          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
-          echo "jar=${JAR}" >> "${GITHUB_OUTPUT}"
-          sha256sum "dist/${JAR}"
-
-      - name: Upload raw JAR artifact
+          cp "$SOURCE" "dist/${NAME}"
+          sha256sum "dist/${NAME}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "jar=${NAME}" >> "$GITHUB_OUTPUT"
+      - name: Upload CI artifact
         uses: actions/upload-artifact@v7
         with:
+          name: SF_ElectricSpawners${{ steps.artifact.outputs.version }}
           path: electricspawners/dist/${{ steps.artifact.outputs.jar }}
-          archive: false
           if-no-files-found: error
-
-      - name: Create or update GitHub release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      - name: Publish raw JAR release asset
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: electricspawners
         env:
           GH_TOKEN: ${{ github.token }}
@@ -92,12 +77,10 @@ jobs:
           JAR: ${{ steps.artifact.outputs.jar }}
         shell: bash
         run: |
-          TAG="v${VERSION}"
-          TITLE="ElectricSpawners Legacy v${VERSION}"
-          NOTES="Paper 26.2 / Slimefun Legacy maintenance build. The attached .jar is ready to place directly in the server plugins folder."
-
-          if gh release view "${TAG}" >/dev/null 2>&1; then
-            gh release upload "${TAG}" "dist/${JAR}" --clobber
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then TAG="$GITHUB_REF_NAME"; else TAG="v${VERSION}"; fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "dist/${JAR}" --clobber
           else
-            gh release create "${TAG}" "dist/${JAR}" --title "${TITLE}" --notes "${NOTES}" --target "${GITHUB_SHA}"
+            gh release create "$TAG" "dist/${JAR}" --target "$GITHUB_SHA" --generate-notes --title "SF_ElectricSpawners $TAG"
           fi
