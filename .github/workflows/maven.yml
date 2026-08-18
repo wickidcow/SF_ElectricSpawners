@@ -62,12 +62,6 @@ jobs:
           sha256sum "dist/${NAME}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "jar=${NAME}" >> "$GITHUB_OUTPUT"
-      - name: Upload CI artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: SF_ElectricSpawners${{ steps.artifact.outputs.version }}
-          path: electricspawners/dist/${{ steps.artifact.outputs.jar }}
-          if-no-files-found: error
       - name: Publish raw JAR release asset
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: electricspawners
