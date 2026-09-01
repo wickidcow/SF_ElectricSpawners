@@ -1,4 +1,4 @@
-name: Build ElectricSpawners 26.2 / Slimefun Legacy
+name: Build ElectricSpawners Legacy
 
 on:
   push:
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build:
-    name: Java 25 / Paper 26.2 / Slimefun Legacy
+    name: Java 21 bytecode / Paper-Purpur 1.21.11-26.2
     runs-on: ubuntu-latest
     steps:
       - name: Checkout ElectricSpawners
@@ -44,9 +44,24 @@ jobs:
           set -euo pipefail
           chmod +x ./gradlew
           ./gradlew publishToMavenLocal -PprojectVersion=Legacy-SNAPSHOT -x test --no-daemon
-      - name: Build ElectricSpawners
+      - name: Verify compatibility metadata
+        working-directory: electricspawners
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '<version>1.0.1</version>' pom.xml
+          grep -Fq '<paper.version>1.21.11-R0.1-SNAPSHOT</paper.version>' pom.xml
+          grep -Fq '<maven.compiler.release>21</maven.compiler.release>' pom.xml
+          grep -Fq "api-version: '1.21.11'" src/main/resources/plugin.yml
+      - name: Verify Paper/Purpur 1.21.11 compilation
         working-directory: electricspawners
         run: mvn -B -ntp clean package
+      - name: Verify Paper/Purpur 26.2 compilation
+        working-directory: electricspawners
+        run: mvn -B -ntp clean package -Dpaper.version=26.2.build.112-stable
+      - name: Build universal release JAR from 1.21.11 baseline
+        working-directory: electricspawners
+        run: mvn -B -ntp clean package -Dpaper.version=1.21.11-R0.1-SNAPSHOT
       - name: Stage versioned JAR
         id: artifact
         working-directory: electricspawners
@@ -59,6 +74,8 @@ jobs:
           test -s "$SOURCE"
           mkdir -p dist
           cp "$SOURCE" "dist/${NAME}"
+          unzip -p "dist/${NAME}" plugin.yml | grep -Fq "api-version: '1.21.11'"
+          javap -verbose -classpath "dist/${NAME}" io.github.thebusybiscuit.electricspawners.ElectricSpawners | grep -Fq 'major version: 65'
           sha256sum "dist/${NAME}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "jar=${NAME}" >> "$GITHUB_OUTPUT"
@@ -79,8 +96,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then TAG="$GITHUB_REF_NAME"; else TAG="v${VERSION}"; fi
+          NOTES="Compatibility release for Minecraft/Purpur 1.21.11 through Paper/Purpur 26.2. Emits Java 21 bytecode and is compile-verified at both endpoints."
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "dist/${JAR}" --clobber
           else
-            gh release create "$TAG" "dist/${JAR}" --target "$GITHUB_SHA" --generate-notes --title "SF_ElectricSpawners $TAG"
+            gh release create "$TAG" "dist/${JAR}" --target "$GITHUB_SHA" --notes "$NOTES" --title "SF_ElectricSpawners $TAG"
           fi
