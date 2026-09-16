@@ -6,9 +6,9 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.thebusybiscuit</groupId>
     <artifactId>ElectricSpawners</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <name>ElectricSpawners</name>
-    <description>Slimefun Legacy maintenance fork of ElectricSpawners for Minecraft 1.21.11 through 26.2.</description>
+    <description>Slimefun Legacy maintenance fork of ElectricSpawners for Minecraft 1.21.11 through 26.3.</description>
 
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
@@ -22,7 +22,7 @@
     </repositories>
 
     <build>
-        <finalName>SF_ElectricSpawners_Legacy_v${project.version}</finalName>
+        <finalName>SF_ElectricSpawners${project.version}</finalName>
         <defaultGoal>clean package</defaultGoal>
         <resources>
             <resource><directory>${project.basedir}/src/main/resources</directory><filtering>true</filtering></resource>
